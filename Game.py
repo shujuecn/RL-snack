@@ -1,14 +1,21 @@
+# 这个文件定义了强化学习所需的一切“硬件”：智能体（蛇）、目标（苹果）和它们所在的宇宙（游戏环境）。
+
 import numpy as np
+import torch
 import config.config as basic_config
+
 # 贪吃蛇初始长度
 PLAYERSIZE = basic_config.PLAYERSIZE
 
 
 class SnakeClass:
-    def __init__(self, gridsize):
-        self.position = np.array([gridsize // 2, gridsize // 2]).astype('float')
-        self.direction = np.array([1., 0.])
-        self.prevpos = [np.array([gridsize // 2, gridsize // 2]).astype('float')]
+    def __init__(self, gridsize: int):
+        """
+        初始化贪吃蛇位置、方向、轨迹和长度
+        """
+        self.position = np.array([gridsize // 2, gridsize // 2]).astype("float")
+        self.direction = np.array([1.0, 0.0])
+        self.prevpos = [np.array([gridsize // 2, gridsize // 2]).astype("float")]
         self.gridsize = gridsize
         self.len = PLAYERSIZE
 
@@ -23,10 +30,12 @@ class SnakeClass:
         """
         self.position += self.direction
         self.prevpos.append(self.position.copy())
-        self.prevpos = self.prevpos[-self.len - 1:]
+        self.prevpos = self.prevpos[-self.len - 1 :]
 
-    def checkdead(self, pos):
-        # 贪吃蛇是否触碰游戏边界
+    def checkdead(self, pos: np.ndarray):
+        """
+        判断蛇是否死亡（撞墙或撞自己），这是触发负奖励的关键事件。
+        """
         if pos[0] <= -1 or pos[0] >= self.gridsize:
             return True
         elif pos[1] <= -1 or pos[1] >= self.gridsize:
@@ -38,6 +47,10 @@ class SnakeClass:
             return False
 
     def getproximity(self):
+        """
+        获取蛇头周围的环境信息，判断上下左右四个方向是否会立即导致死亡。
+        这部分信息是构成“状态”的重要组成部分。
+        """
         L = self.position - np.array([1, 0])
         R = self.position + np.array([1, 0])
         U = self.position - np.array([0, 1])
@@ -49,16 +62,16 @@ class SnakeClass:
         return proximity
 
     def showState(self):
-        print('Snake:')
-        print('Position:', self.position)
-        print('Direction:', self.direction)
-        print('Previous Positions:', self.prevpos)
-        print('Length:', len(self))
-        print('\n')
+        print("Snake:")
+        print("Position:", self.position)
+        print("Direction:", self.direction)
+        print("Previous Positions:", self.prevpos)
+        print("Length:", len(self))
+        print("\n")
 
 
 class AppleClass:
-    def __init__(self, gridsize):
+    def __init__(self, gridsize: int):
         self.position = np.random.randint(1, gridsize, 2)
         self.score = 0
         self.gridsize = gridsize
@@ -68,58 +81,70 @@ class AppleClass:
         self.score += 1
 
     def showState(self):
-        print('Apple:')
-        print('Position:', self.position)
-        print('Score:', self.score)
-        print('\n')
+        print("Apple:")
+        print("Position:", self.position)
+        print("Score:", self.score)
+        print("\n")
 
 
 class GameEnvironment:
-    def __init__(self, gridsize, nothing, dead, apple):
+    def __init__(self, gridsize: int, nothing: float, dead: float, apple: float):
         self.snake = SnakeClass(gridsize)
         self.apple = AppleClass(gridsize)
         self.game_over = False
         self.gridsize = gridsize
-        self.reward_nothing = nothing
-        self.reward_dead = dead
-        self.reward_apple = apple
-        self.time_since_apple = 0
+        self.reward_nothing = nothing  # 每一步的微小负奖励，鼓励智能体尽快找到苹果
+        self.reward_dead = dead  # 撞墙或撞自己时的负奖励
+        self.reward_apple = apple  # 吃到苹果时的正奖励
+        self.time_since_apple = 0  # 记录自上次吃到苹果以来的时间步数
+        # 定义移动方向向量
         self.player_moves = {
-            'L': np.array([-1., 0.]),
-            'R': np.array([1., 0.]),
-            'U': np.array([0., -1.]),
-            'D': np.array([0., 1.])
+            "L": np.array([-1.0, 0.0]),
+            "R": np.array([1.0, 0.0]),
+            "U": np.array([0.0, -1.0]),
+            "D": np.array([0.0, 1.0]),
         }
 
     def resetgame(self):
-        self.snake.position = np.random.randint(1, self.gridsize, 2).astype('float')
-        self.apple.position = np.random.randint(1, self.gridsize, 2).astype('float')
-        self.snake.prevpos = [self.snake.position.copy().astype('float')]
+        # 重置游戏状态
+        self.snake.position = np.random.randint(1, self.gridsize, 2).astype("float")
+        self.apple.position = np.random.randint(1, self.gridsize, 2).astype("float")
+        self.snake.prevpos = [self.snake.position.copy().astype("float")]  # 重置轨迹
         self.apple.score = 0
         self.snake.len = PLAYERSIZE
         self.game_over = False
 
     def get_boardstate(self):
-        return [self.snake.position, self.snake.direction, self.snake.prevpos, self.apple.position, self.apple.score,
-                self.game_over]
+        return [
+            self.snake.position,
+            self.snake.direction,
+            self.snake.prevpos,
+            self.apple.position,
+            self.apple.score,
+            self.game_over,
+        ]
 
-    def update_boardstate(self, move):
+    def update_boardstate(self, move: torch.Tensor | int):
         reward = self.reward_nothing
-        Done = False
+        Done = False  # 游戏是否结束的标志
         # 0:Left 1:Right 2:Up 3:Down
         # 如果方向要向左，且当前方向不为右，则更新方向为左（避免碰到自己）
         if move == 0:
-            if not (self.snake.direction == self.player_moves['R']).all():
-                self.snake.direction = self.player_moves['L']
+            if not (self.snake.direction == self.player_moves["R"]).all():
+                # 向左移动
+                self.snake.direction = self.player_moves["L"]
         if move == 1:
-            if not (self.snake.direction == self.player_moves['L']).all():
-                self.snake.direction = self.player_moves['R']
+            if not (self.snake.direction == self.player_moves["L"]).all():
+                # 向右移动
+                self.snake.direction = self.player_moves["R"]
         if move == 2:
-            if not (self.snake.direction == self.player_moves['D']).all():
-                self.snake.direction = self.player_moves['U']
+            if not (self.snake.direction == self.player_moves["D"]).all():
+                # 向上移动
+                self.snake.direction = self.player_moves["U"]
         if move == 3:
-            if not (self.snake.direction == self.player_moves['U']).all():
-                self.snake.direction = self.player_moves['D']
+            if not (self.snake.direction == self.player_moves["U"]).all():
+                # 向下移动
+                self.snake.direction = self.player_moves["D"]
 
         self.snake.move()
         self.time_since_apple += 1
@@ -131,11 +156,13 @@ class GameEnvironment:
             Done = True
 
         if self.snake.checkdead(self.snake.position):
+            # 撞墙或撞自己
             self.game_over = True
             reward = self.reward_dead
             self.time_since_apple = 0
             Done = True
         elif (self.snake.position == self.apple.position).all():
+            # 吃到苹果
             self.apple.eaten()
             self.snake.len += 1
             self.time_since_apple = 0
@@ -145,20 +172,20 @@ class GameEnvironment:
         return reward, Done, len_of_snake
 
     def showState(self):
-        print('Game Environment:')
-        print('Snake:')
-        print('Position:', self.snake.position)
-        print('Direction:', self.snake.direction)
-        print('Previous Positions:', self.snake.prevpos)
-        print('Length:', len(self.snake))
-        print('Apple:')
-        print('Position:', self.apple.position)
-        print('Score:', self.apple.score)
-        print('Game Over:', self.game_over)
-        print('\n')
+        print("Game Environment:")
+        print("Snake:")
+        print("Position:", self.snake.position)
+        print("Direction:", self.snake.direction)
+        print("Previous Positions:", self.snake.prevpos)
+        print("Length:", len(self.snake))
+        print("Apple:")
+        print("Position:", self.apple.position)
+        print("Score:", self.apple.score)
+        print("Game Over:", self.game_over)
+        print("\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gridsize = 10
 
     snake = SnakeClass(gridsize)

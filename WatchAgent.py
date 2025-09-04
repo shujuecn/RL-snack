@@ -14,19 +14,34 @@ def drawboard(win, snake, apple, block_size, windowwidth, windowheight):
         gradient_color = (
             int(255 * (i + 1) / len(snake.prevpos)),
             int(255 * i / len(snake.prevpos)),
-            0
+            0,
         )
-        pygame.draw.rect(win, gradient_color, (pos[0] * block_size, pos[1] * block_size, block_size, block_size))
+        pygame.draw.rect(
+            win,
+            gradient_color,
+            (pos[0] * block_size, pos[1] * block_size, block_size, block_size),
+        )
 
     # 绘制圆形蛇头
     head_pos = snake.prevpos[-1]  # 蛇头位置
     head_radius = int(block_size / 2)
-    head_center = (head_pos[0] * block_size + head_radius, head_pos[1] * block_size + head_radius)
+    head_center = (
+        head_pos[0] * block_size + head_radius,
+        head_pos[1] * block_size + head_radius,
+    )
     pygame.draw.circle(win, (0, 255, 0), head_center, head_radius)
 
     # 绘制苹果
-    pygame.draw.rect(win, (255, 0, 0),
-                     (apple.position[0] * block_size, apple.position[1] * block_size, block_size, block_size))
+    pygame.draw.rect(
+        win,
+        (255, 0, 0),
+        (
+            apple.position[0] * block_size,
+            apple.position[1] * block_size,
+            block_size,
+            block_size,
+        ),
+    )
 
     # 绘制背景网格
     for x in range(0, windowwidth // 2, block_size):
@@ -43,14 +58,14 @@ def run_snake_game(model):
     speed = basic_config.PLAYERSPEED
     block_size = basic_config.BLOCKSIZE
 
-    board = GameEnvironment(gridsize, nothing=0., dead=-10., apple=10.)
+    board = GameEnvironment(gridsize, nothing=0.0, dead=-10.0, apple=10.0)
     windowwidth = gridsize * block_size * 2
     windowheight = gridsize * block_size
 
     pygame.init()  # pygame 初始化
     win = pygame.display.set_mode((windowwidth, windowheight))  # 设置pygame窗口
     pygame.display.set_caption("snake")
-    font = pygame.font.SysFont('arial', 18)
+    font = pygame.font.SysFont("arial", 18)
     clock = pygame.time.Clock()
 
     prev_len_of_snake = 0
@@ -68,9 +83,15 @@ def run_snake_game(model):
         allRewards += reward
         drawboard(win, board.snake, board.apple, block_size, windowwidth, windowheight)
 
-        lensnaketext = font.render('  len of snake: ' + str(len_of_snake), False, (255, 255, 255))
-        rewardtext = font.render('  reward: ' + str(int(allRewards)), False, (255, 255, 255))
-        prevlensnaketext = font.render('  len of previous snake: ' + str(prev_len_of_snake), False, (255, 255, 255))
+        lensnaketext = font.render(
+            "  len of snake: " + str(len_of_snake), False, (255, 255, 255)
+        )
+        rewardtext = font.render(
+            "  reward: " + str(int(allRewards)), False, (255, 255, 255)
+        )
+        prevlensnaketext = font.render(
+            "  len of previous snake: " + str(prev_len_of_snake), False, (255, 255, 255)
+        )
 
         win.blit(lensnaketext, (windowwidth // 2, 40))
         win.blit(rewardtext, (windowwidth // 2, 80))
@@ -95,14 +116,14 @@ def play_snake_game_user():
     speed = basic_config.PLAYERSPEED
     block_size = basic_config.BLOCKSIZE
 
-    board = GameEnvironment(gridsize, nothing=0., dead=-10., apple=10.)
+    board = GameEnvironment(gridsize, nothing=0.0, dead=-10.0, apple=10.0)
     windowwidth = gridsize * block_size * 2
     windowheight = gridsize * block_size
 
     pygame.init()  # pygame 初始化
     win = pygame.display.set_mode((windowwidth, windowheight))  # 设置pygame窗口
     pygame.display.set_caption("snake")
-    font = pygame.font.SysFont('arial', 18)
+    font = pygame.font.SysFont("arial", 18)
     clock = pygame.time.Clock()
 
     runGame = True
@@ -139,10 +160,16 @@ def play_snake_game_user():
 
         if action is not None:
             reward, done, len_of_snake = board.update_boardstate(action)
-            drawboard(win, board.snake, board.apple, block_size, windowwidth, windowheight)
+            drawboard(
+                win, board.snake, board.apple, block_size, windowwidth, windowheight
+            )
 
-            lensnaketext = font.render(' LEN OF SNAKE: ' + str(len_of_snake), False, (255, 255, 255))
-            rewardtext = font.render(' REWARD: ' + str(int(reward)), False, (255, 255, 255))
+            lensnaketext = font.render(
+                " LEN OF SNAKE: " + str(len_of_snake), False, (255, 255, 255)
+            )
+            rewardtext = font.render(
+                " REWARD: " + str(int(reward)), False, (255, 255, 255)
+            )
 
             win.blit(lensnaketext, (windowwidth // 2, 40))
             win.blit(rewardtext, (windowwidth // 2, 80))
@@ -155,17 +182,14 @@ def play_snake_game_user():
     pygame.quit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # 设置一个标志，如果use_ai为True，使用深度强化学习模型玩游戏，否则让玩家自己操作游戏
     use_ai = True
     if use_ai:
         # 深度强化学习模型玩游戏
         model = QNetwork(input_dim=10, hidden_dim=20, output_dim=5)
-        model.load_state_dict(torch.load('./dir_chk/Snake_60000'))
+        model.load_state_dict(torch.load("./dir_chk/Snake_60000"))
         run_snake_game(model)
     else:
         # 玩家自己操作游戏
         play_snake_game_user()
-
-
-
