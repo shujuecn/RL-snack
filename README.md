@@ -53,7 +53,7 @@
     └── snake_ai_info.mp4
 ```
 
-## Claude 讲解
+## Gemini 2.5 Pro 讲解
 
 ### 1. 强化学习与Q-Learning入门
 
